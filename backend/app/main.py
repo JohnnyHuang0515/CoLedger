@@ -6,8 +6,10 @@ startup if it's empty.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -107,3 +109,20 @@ app.include_router(stocks.router)
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "quote_provider": settings.QUOTE_PROVIDER}
+
+
+# ── 供應前端 build（單一伺服器同時出 UI + API，讓一條通道就能公開）──
+# 僅在 frontend/dist 存在時啟用；dev（Vite）不受影響。前端走相對 /api，同源即可。
+_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+if _DIST.is_dir():
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def spa(full_path: str) -> FileResponse:
+        # /api/* 未匹配到路由 → 回通用 404 JSON（不要餵 index.html、也不用 CLUB_NOT_FOUND）。
+        if full_path.startswith("api"):
+            raise APIError(404, "NOT_FOUND", "找不到此 API 路徑")
+        # 真實檔案（favicon.svg、assets/*）直接給；防目錄穿越後其餘路徑回 index.html。
+        candidate = (_DIST / full_path).resolve()
+        if full_path and _DIST in candidate.parents and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(_DIST / "index.html")
