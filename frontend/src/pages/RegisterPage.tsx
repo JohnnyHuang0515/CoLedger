@@ -34,7 +34,7 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-app px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-app px-4">
       <Card className="w-full max-w-sm p-8">
         <h1 className="mb-1 text-xl font-bold text-text-primary">建立帳號</h1>
         <p className="mb-6 text-sm text-text-secondary">註冊後即可建立或加入社團</p>

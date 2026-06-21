@@ -53,6 +53,15 @@ class Side(str, enum.Enum):
     SELL = "SELL"
 
 
+class TxType(str, enum.Enum):
+    """Transaction kind. BUY/SELL move stock; DEPOSIT/WITHDRAW move only cash."""
+
+    BUY = "BUY"
+    SELL = "SELL"
+    DEPOSIT = "DEPOSIT"
+    WITHDRAW = "WITHDRAW"
+
+
 class TxStatus(str, enum.Enum):
     ACTIVE = "ACTIVE"
     DELETED = "DELETED"
@@ -152,12 +161,21 @@ class Transaction(Base):
     created_by_user_id: Mapped[str] = mapped_column(
         String, ForeignKey("users.id"), nullable=False
     )
-    stock_symbol: Mapped[str] = mapped_column(
-        String, ForeignKey("stocks.symbol"), nullable=False
+    # Transaction kind. BUY/SELL carry stock fields; DEPOSIT/WITHDRAW carry only
+    # `amount`. Defaults to BUY so legacy rows / callers stay valid.
+    type: Mapped[TxType] = mapped_column(
+        Enum(TxType), nullable=False, default=TxType.BUY
     )
-    side: Mapped[Side] = mapped_column(Enum(Side), nullable=False)
-    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    price: Mapped[object] = mapped_column(Numeric(18, 4), nullable=False)
+    # Stock fields — null for cash (DEPOSIT/WITHDRAW) transactions.
+    stock_symbol: Mapped[str | None] = mapped_column(
+        String, ForeignKey("stocks.symbol"), nullable=True
+    )
+    # `side` retained for BUY/SELL backward-compat; null for cash.
+    side: Mapped[Side | None] = mapped_column(Enum(Side), nullable=True)
+    quantity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    price: Mapped[object | None] = mapped_column(Numeric(18, 4), nullable=True)
+    # Cash amount (positive) for DEPOSIT/WITHDRAW; null for BUY/SELL.
+    amount: Mapped[object | None] = mapped_column(Numeric(18, 4), nullable=True)
     traded_at: Mapped[date] = mapped_column(Date, nullable=False)
     is_opening_balance: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False

@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import type { Role, MembershipStatus, Side } from '../api/types';
+import type { Role, MembershipStatus, Side, TxType } from '../api/types';
 
 // ---- Button ----
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -8,7 +8,7 @@ const VARIANTS: Record<Variant, string> = {
   secondary:
     'bg-surface text-text-primary border border-border hover:bg-subtle disabled:opacity-50',
   ghost: 'text-primary hover:bg-primary-soft disabled:opacity-50',
-  danger: 'bg-loss text-white hover:opacity-90 disabled:opacity-50',
+  danger: 'bg-loss text-on-primary hover:opacity-90 disabled:opacity-50',
 };
 
 export function Button({
@@ -99,10 +99,25 @@ export function SidePill({ side }: { side: Side }) {
   );
 }
 
+// ---- Cash type pill (入金/出金) ----
+// 入金=primary（藍底）、出金=中性（灰底）。金額本身用中性色，不用紅綠。
+export function CashTypePill({ type }: { type: Extract<TxType, 'DEPOSIT' | 'WITHDRAW'> }) {
+  const isDeposit = type === 'DEPOSIT';
+  return (
+    <span
+      className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold ${
+        isDeposit ? 'bg-primary-soft text-primary' : 'bg-subtle text-text-secondary'
+      }`}
+    >
+      {isDeposit ? '入金' : '出金'}
+    </span>
+  );
+}
+
 // ---- Proxy (代操) badge ----
 export function ProxyBadge() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
+    <span className="inline-flex items-center gap-1 rounded-md bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
       代操
     </span>
   );

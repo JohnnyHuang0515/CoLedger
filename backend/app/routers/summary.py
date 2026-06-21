@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..deps import get_current_user, require_club_member
 from ..models import Membership, MembershipStatus, Stock, User
-from ..schemas import SummaryBySymbol, SummaryResponse, money_str
-from ..services import holdings_calc
+from ..schemas import SummaryBySymbol, SummaryResponse, ledger_out, money_str
+from ..services import holdings_calc, ledger_calc
 from ..services.quotes_read import ensure_quotes_fresh, get_quote_view
 
 router = APIRouter(prefix="/api/clubs", tags=["summary"])
@@ -104,10 +104,20 @@ def get_summary(
         reverse=True,
     )
 
+    # Club-wide ledger = sum of each ACTIVE member's ledger; return_pct is then
+    # derived from the club totals (LedgerOut.return_pct property).
+    club_ledger = ledger_calc.sum_ledgers(
+        [
+            ledger_calc.compute_member_ledger(db, club_id, m.user_id)
+            for m in active_members
+        ]
+    )
+
     return SummaryResponse(
         as_of=datetime.now(timezone.utc).isoformat(),
         total_market_value=money_str(total_mv),
         total_unrealized_pnl=money_str(total_unreal),
         total_realized_pnl=money_str(total_real),
+        club_ledger=ledger_out(club_ledger),
         by_symbol=by_symbol,
     )

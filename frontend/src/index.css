@@ -12,6 +12,15 @@
   body {
     @apply bg-app text-text-primary font-sans antialiased;
   }
+
+  /* Consistent keyboard-focus ring across every interactive element.
+     Only shows for keyboard (:focus-visible), never on mouse click. Outline
+     follows border-radius, so it reads correctly on pills, cards and buttons.
+     Inputs/selects opt out via their own `outline-none focus:border-primary`. */
+  :focus-visible {
+    outline: 2px solid theme('colors.primary.DEFAULT');
+    outline-offset: 2px;
+  }
 }
 
 @layer utilities {

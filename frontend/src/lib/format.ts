@@ -52,6 +52,34 @@ export function formatQty(qty: number): string {
   return qty.toLocaleString('zh-TW');
 }
 
+/** Signed percent for display, e.g. "+12.4%" / "-3.2%". Null/NaN -> "—". */
+export function formatSignedPercent(pct: number | null): string {
+  if (pct === null || Number.isNaN(pct)) return '—';
+  const sign = pct > 0 ? '+' : '';
+  return `${sign}${pct.toFixed(1)}%`;
+}
+
+/** Signed percent from a backend decimal string (e.g. "12.4" -> "+12.4%"). Null/empty -> "—". */
+export function formatReturnPct(v: string | null | undefined): string {
+  return formatSignedPercent(toNum(v));
+}
+
+/** Unrealized P&L as a percent of cost basis (avg_cost * qty), for compact mobile cards.
+ * Derived from backend-computed values only — we never recompute the P&L itself. Null when no quote. */
+export function unrealizedPct(unrealizedPnl: string | null, avgCost: string, quantity: number): number | null {
+  const pnl = toNum(unrealizedPnl);
+  const cost = toNum(avgCost);
+  if (pnl === null || cost === null) return null;
+  const basis = cost * quantity;
+  return basis > 0 ? (pnl / basis) * 100 : null;
+}
+
+/** Compact lot display: "2 張" when a whole number of 張 (1 張 = 1,000 股), else falls back to 股. */
+export function formatLots(qty: number): string {
+  if (qty % 1000 === 0) return `${(qty / 1000).toLocaleString('zh-TW')} 張`;
+  return `${formatQty(qty)} 股`;
+}
+
 /** Format an ISO timestamp to "MM/DD HH:mm" local. */
 export function formatTime(iso: string | null | undefined): string {
   if (!iso) return '—';

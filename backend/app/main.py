@@ -76,7 +76,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="協作股票紀錄系統 POC", lifespan=lifespan)
+app = FastAPI(title="同甘共股 CoLedger", lifespan=lifespan)
 
 # CORS — allow the Vite dev server.
 app.add_middleware(

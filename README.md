@@ -1,4 +1,4 @@
-# 協作股票紀錄系統（Collaborative Stock Tracker）
+# 同甘共股 CoLedger（Collaborative Stock Tracker）
 
 台股原生、為小社團而生的協作型持股帳本——多人共用一份空間記錄自己的買賣與部位、互相看得到，自動抓現價算損益，並看得到誰在何時改了什麼，取代 Excel 互傳。
 

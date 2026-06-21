@@ -1,54 +1,42 @@
 import { motion } from 'motion/react';
 import type { TransactionRow } from '../api/types';
-import { formatDate, formatMoney, formatPrice, formatQty } from '../lib/format';
-import { PnLPill } from './PnLPill';
-import { ProxyBadge, SidePill } from './ui';
+import { formatDate, formatMoney } from '../lib/format';
+import { CashTypePill, ProxyBadge } from './ui';
 import { fadeItem, listContainer, listItem } from '../lib/motionPresets';
 
-// 此清單只渲染股票買賣 (BUY/SELL)；入金/出金 (DEPOSIT/WITHDRAW) 由 CashList 負責。
+// 出入金清單 — 只渲染 DEPOSIT/WITHDRAW（入金/出金）。
+// 桌機 (md↑) 表格；手機改卡片。類型膠囊 + 受益人 + 中性色金額 + 日期；自己的可編輯/刪除。
+// 金額一律用中性色 text-text-primary（不紅綠）——紅綠保留給 P&L。
 
-interface TransactionListProps {
+interface CashListProps {
   transactions: TransactionRow[];
-  // current user id — used to gate edit/delete to own transactions
+  // current user id — used to gate edit/delete to own cash entries
   currentUserId: string | undefined;
   // whether the viewer can write at all (VIEWER => false)
   canWrite: boolean;
-  // 手機卡是否顯示「歸屬」標籤（檢視全部成員時 true；選定單一成員時不需重複）
+  // 手機卡是否顯示「受益人」標籤（檢視全部成員時 true）
   showOwner?: boolean;
   onEdit: (tx: TransactionRow) => void;
   onDelete: (tx: TransactionRow) => void;
 }
 
-// editable when own transaction (attribution self) and can write
+// editable when own entry (attribution self) and can write
 function isEditable(tx: TransactionRow, currentUserId: string | undefined, canWrite: boolean): boolean {
   return canWrite && tx.member_user_id === currentUserId;
 }
 
-// C-4 交易歷史清單 — 桌機 (md↑) 表格；手機改卡片 (方案A).
-// 日期/股票/買賣/股數/成交價/金額/本筆已實現(僅SELL)/代操badge/動作.
-export function TransactionList({
-  transactions,
-  currentUserId,
-  canWrite,
-  showOwner = false,
-  onEdit,
-  onDelete,
-}: TransactionListProps) {
+export function CashList({ transactions, currentUserId, canWrite, showOwner = false, onEdit, onDelete }: CashListProps) {
   return (
     <>
       {/* 桌機：表格 */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[820px] border-collapse text-sm">
+        <table className="w-full min-w-[560px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs font-medium text-text-muted">
               <th className="px-4 py-3">日期</th>
-              <th className="px-4 py-3">股票</th>
-              <th className="px-4 py-3">歸屬 / 登錄</th>
-              <th className="px-4 py-3">買賣</th>
-              <th className="px-4 py-3 text-right">股數</th>
-              <th className="px-4 py-3 text-right">成交價</th>
+              <th className="px-4 py-3">類型</th>
+              <th className="px-4 py-3">受益人 / 登錄</th>
               <th className="px-4 py-3 text-right">金額</th>
-              <th className="px-4 py-3 text-right">本筆已實現</th>
               <th className="px-4 py-3 text-right">動作</th>
             </tr>
           </thead>
@@ -65,8 +53,7 @@ export function TransactionList({
                     {formatDate(tx.traded_at)}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-text-primary">{tx.name}</div>
-                    <div className="text-xs text-text-secondary">{tx.stock_symbol}</div>
+                    <CashTypePill type={tx.type as 'DEPOSIT' | 'WITHDRAW'} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
@@ -77,22 +64,9 @@ export function TransactionList({
                       <div className="text-xs text-text-muted">由 {tx.created_by_name} 登錄</div>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    <SidePill side={tx.side as 'BUY' | 'SELL'} />
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {formatQty(tx.quantity ?? 0)}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatPrice(tx.price)}</td>
+                  {/* 金額：中性色（不紅綠） */}
                   <td className="px-4 py-3 text-right tabular-nums text-text-primary">
                     {formatMoney(tx.amount)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {tx.side === 'SELL' && tx.realized_pnl !== null ? (
-                      <PnLPill value={tx.realized_pnl} />
-                    ) : (
-                      <span className="text-text-muted">—</span>
-                    )}
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     {editable ? (
@@ -131,7 +105,7 @@ export function TransactionList({
         animate="show"
       >
         {transactions.map((tx) => (
-          <TransactionCard
+          <CashCard
             key={tx.id}
             tx={tx}
             editable={isEditable(tx, currentUserId, canWrite)}
@@ -145,8 +119,8 @@ export function TransactionList({
   );
 }
 
-// 手機交易卡 — 對應設計 M2：買賣+股票/日期 ｜ 股數@價/金額 ｜ 本筆已實現(SELL) ｜ 編輯/刪除.
-function TransactionCard({
+// 手機出入金卡 — 類型膠囊 + 日期 ｜ 中性色金額 ｜ 受益人(代操時) ｜ 編輯/刪除.
+function CashCard({
   tx,
   editable,
   showOwner,
@@ -159,44 +133,29 @@ function TransactionCard({
   onEdit: (tx: TransactionRow) => void;
   onDelete: (tx: TransactionRow) => void;
 }) {
-  const showRealized = tx.side === 'SELL' && tx.realized_pnl !== null;
-
   return (
-    <motion.div
-      variants={listItem}
-      className="rounded-xl border border-border bg-surface p-3.5"
-    >
+    <motion.div variants={listItem} className="rounded-xl border border-border bg-surface p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <SidePill side={tx.side as 'BUY' | 'SELL'} />
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="truncate font-medium text-text-primary">{tx.name}</span>
-            <span className="truncate text-xs text-text-muted">{tx.stock_symbol}</span>
-          </div>
+          <CashTypePill type={tx.type as 'DEPOSIT' | 'WITHDRAW'} />
+          <span className="truncate font-medium text-text-primary">
+            {tx.type === 'DEPOSIT' ? '入金' : '出金'}
+          </span>
         </div>
         <span className="shrink-0 text-xs text-text-muted">{formatDate(tx.traded_at)}</span>
       </div>
 
-      <div className="mt-2.5 flex items-center justify-between gap-3 text-sm">
-        <span className="font-medium tabular-nums text-text-primary">
-          {formatQty(tx.quantity ?? 0)} 股 × {formatPrice(tx.price)}
-        </span>
-        <span className="tabular-nums text-text-secondary">{formatMoney(tx.amount)}</span>
+      {/* 金額：中性色（不紅綠） */}
+      <div className="mt-2.5 flex items-center justify-end gap-3 text-sm">
+        <span className="font-medium tabular-nums text-text-primary">{formatMoney(tx.amount)}</span>
       </div>
 
-      {/* 歸屬：檢視全部成員時一律顯示這是誰的；代操再加「由誰登錄」 */}
+      {/* 受益人：檢視全部成員時一律顯示這是誰的；代操再加「由誰登錄」 */}
       {(showOwner || tx.is_proxy) && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
-          <span>歸屬 {tx.member_name}</span>
+          <span>受益人 {tx.member_name}</span>
           {tx.is_proxy && <ProxyBadge />}
           {tx.is_proxy && <span>由 {tx.created_by_name} 登錄</span>}
-        </div>
-      )}
-
-      {showRealized && (
-        <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-border/60 pt-2.5 text-sm">
-          <span className="text-text-muted">本筆已實現</span>
-          <PnLPill value={tx.realized_pnl} />
         </div>
       )}
 

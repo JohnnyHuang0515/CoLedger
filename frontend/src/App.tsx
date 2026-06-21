@@ -4,8 +4,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { ClubEntryPage } from './pages/ClubEntryPage';
 import { JoinPage } from './pages/JoinPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { SharedHoldingsPage } from './pages/SharedHoldingsPage';
-import { SummaryPage } from './pages/SummaryPage';
+import { ClubViewPage } from './pages/ClubViewPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { MembersPage } from './pages/MembersPage';
 import { ActivityPage } from './pages/ActivityPage';
@@ -42,8 +41,10 @@ export default function App() {
         }
       >
         <Route index element={<DashboardPage />} />
-        <Route path="holdings" element={<SharedHoldingsPage />} />
-        <Route path="summary" element={<SummaryPage />} />
+        <Route path="club" element={<ClubViewPage />} />
+        {/* 舊路徑（共享檢視 / 社團彙總）合併為「社團檢視」，重導以保留書籤 */}
+        <Route path="holdings" element={<Navigate to="../club" replace />} />
+        <Route path="summary" element={<Navigate to="../club" replace />} />
         <Route path="transactions" element={<TransactionsPage />} />
         <Route path="members" element={<MembersPage />} />
         <Route path="activity" element={<ActivityPage />} />

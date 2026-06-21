@@ -8,7 +8,6 @@ import { useMyClubs } from '../hooks/queries';
 import {
   BarChartIcon,
   UsersIcon,
-  CalculatorIcon,
   ReceiptIcon,
   SettingsIcon,
   ClockIcon,
@@ -25,9 +24,8 @@ interface NavItem {
 
 function navItems(clubId: string): NavItem[] {
   return [
-    { to: `/clubs/${clubId}`, label: '持股總覽', icon: <BarChartIcon /> },
-    { to: `/clubs/${clubId}/holdings`, label: '共享檢視', icon: <UsersIcon /> },
-    { to: `/clubs/${clubId}/summary`, label: '社團彙總', icon: <CalculatorIcon /> },
+    { to: `/clubs/${clubId}`, label: '資金帳本', icon: <BarChartIcon /> },
+    { to: `/clubs/${clubId}/club`, label: '社團檢視', icon: <UsersIcon /> },
     { to: `/clubs/${clubId}/transactions`, label: '交易紀錄', icon: <ReceiptIcon /> },
     { to: `/clubs/${clubId}/members`, label: '成員管理', icon: <SettingsIcon />, ownerOnly: true },
     { to: `/clubs/${clubId}/activity`, label: '變更紀錄', icon: <ClockIcon /> },
@@ -57,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-full flex-col bg-app">
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <div className="relative flex items-center gap-2">
             <button
               type="button"
@@ -86,7 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     exit={{ opacity: 0, y: -6, scale: 0.97, transition: { duration: 0.12 } }}
                     transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                     style={{ transformOrigin: 'top left' }}
-                    className="absolute left-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-xl border border-border bg-surface shadow-lg"
+                    className="absolute left-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-xl border border-border bg-surface shadow-card"
                   >
                   <div className="px-3 pb-1 pt-2 text-xs font-medium text-text-muted">切換社團</div>
                   <ul className="max-h-72 overflow-y-auto">
@@ -167,7 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           here on purpose: mode="wait" + React.StrictMode can leave the incoming
           page stuck at opacity:0 (blank). A plain keyed motion.div always
           replays initial→animate on mount, so it can't get stuck. */}
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-24 md:pb-6">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-24 md:pb-6">
         <motion.div
           key={location.pathname}
           initial={{ opacity: 0, y: 8 }}

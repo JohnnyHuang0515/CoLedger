@@ -15,9 +15,10 @@ from ..schemas import (
     HoldingFullOut,
     HoldingsResponse,
     MemberHoldingsOut,
+    ledger_out,
     money_str,
 )
-from ..services import holdings_calc
+from ..services import holdings_calc, ledger_calc
 from ..services.quotes_read import ensure_quotes_fresh, get_quote_view
 
 router = APIRouter(prefix="/api/clubs", tags=["holdings"])
@@ -64,6 +65,7 @@ def build_member_holdings(
                 name=name,
                 quantity=h.quantity,
                 avg_cost=money_str(h.avg_cost),
+                cost_basis=money_str(h.avg_cost * Decimal(h.quantity)),
                 price=money_str(price),
                 price_as_of=_iso(qv.as_of),
                 stale=qv.stale,
@@ -74,8 +76,12 @@ def build_member_holdings(
         )
     # Stable ordering by symbol for deterministic UI.
     out_holdings.sort(key=lambda x: x.stock_symbol)
+    ledger = ledger_calc.compute_member_ledger(db, club_id, user.id)
     return MemberHoldingsOut(
-        user_id=user.id, display_name=user.display_name, holdings=out_holdings
+        user_id=user.id,
+        display_name=user.display_name,
+        ledger=ledger_out(ledger),
+        holdings=out_holdings,
     )
 
 

@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useClub } from '../club/ClubContext';
 import { useActivity, useMembers } from '../hooks/queries';
-import { Card } from '../components/ui';
 import { EmptyState, ErrorState, SkeletonRows } from '../components/states';
 import { ClockIcon } from '../components/icons';
 import { formatTime, todayStr } from '../lib/format';
+import { sortByRole } from '../lib/members';
 import { listContainer, listItem } from '../lib/motionPresets';
 import type { ActivityEntry, ActivityQuery, ChangeAction } from '../api/types';
 
@@ -26,14 +26,18 @@ export function ActivityPage() {
   const [filters, setFilters] = useState<ActivityQuery>({});
   const { data, isLoading, isError, error, refetch } = useActivity(clubId, filters);
   const { data: membersData } = useMembers(clubId);
-  const members = membersData?.members ?? [];
+  const members = sortByRole(membersData?.members ?? []); // 團主置頂
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-lg font-bold text-text-primary">變更紀錄</h1>
+      <div>
+        <h1 className="text-lg font-bold text-text-primary">變更紀錄</h1>
+        {data && (
+          <p className="text-xs text-text-muted">共 {data.entries.length} 筆變更</p>
+        )}
+      </div>
 
-      <Card className="px-4 py-3">
-        <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-text-muted">成員</span>
             <select
@@ -79,10 +83,12 @@ export function ActivityPage() {
               清除篩選
             </button>
           )}
-        </div>
-      </Card>
+      </div>
 
-      <Card className="px-5 py-4">
+      <section className="md:rounded-card md:border md:border-border md:bg-surface md:shadow-card">
+        <div className="pb-1 md:border-b md:border-border md:px-5 md:py-3">
+          <h2 className="text-sm font-bold text-text-primary">變更時間軸</h2>
+        </div>
         {isLoading ? (
           <SkeletonRows />
         ) : isError ? (
@@ -90,18 +96,20 @@ export function ActivityPage() {
         ) : !data || data.entries.length === 0 ? (
           <EmptyState icon={<ClockIcon />} title="尚無變更紀錄" />
         ) : (
-          <motion.ol
-            className="flex flex-col gap-0"
-            variants={listContainer}
-            initial="hidden"
-            animate="show"
-          >
-            {data.entries.map((entry, idx) => (
-              <ActivityRow key={entry.id} entry={entry} last={idx === data.entries.length - 1} />
-            ))}
-          </motion.ol>
+          <div className="px-5 py-4">
+            <motion.ol
+              className="flex flex-col gap-0"
+              variants={listContainer}
+              initial="hidden"
+              animate="show"
+            >
+              {data.entries.map((entry, idx) => (
+                <ActivityRow key={entry.id} entry={entry} last={idx === data.entries.length - 1} />
+              ))}
+            </motion.ol>
+          </div>
         )}
-      </Card>
+      </section>
     </div>
   );
 }

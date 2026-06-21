@@ -1,4 +1,4 @@
-# 協作股票紀錄 — Frontend
+# 同甘共股 CoLedger — Frontend
 
 Taiwan-stock collaborative portfolio tracker (POC frontend).
 

@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import errors
-from ..models import Side, Transaction, TxStatus
+from ..models import Side, Transaction, TxStatus, TxType
 
 ZERO = Decimal("0")
 
@@ -43,6 +43,8 @@ def _sorted_active_txns(
             Transaction.member_user_id == member_user_id,
             Transaction.stock_symbol == stock_symbol,
             Transaction.status == TxStatus.ACTIVE,
+            # Cash (DEPOSIT/WITHDRAW) txns never affect a stock position.
+            Transaction.type.in_((TxType.BUY, TxType.SELL)),
         )
     ).all()
     # Sort by traded_at then created_at (BUILD-CONTRACT §3).
@@ -126,6 +128,8 @@ def member_symbols(
             Transaction.club_id == club_id,
             Transaction.member_user_id == member_user_id,
             Transaction.status == TxStatus.ACTIVE,
+            # Only stock txns have a symbol; cash txns are null.
+            Transaction.type.in_((TxType.BUY, TxType.SELL)),
         )
         .distinct()
     ).all()

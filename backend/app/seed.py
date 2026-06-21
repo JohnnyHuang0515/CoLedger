@@ -33,6 +33,7 @@ from .models import (
     Market,
     Transaction,
     TxStatus,
+    TxType,
     User,
 )
 from .services.changelog import stage_change_log, transaction_snapshot
@@ -160,6 +161,7 @@ def seed_all(db: Session) -> None:
             club_id=club.id,
             member_user_id=member.id,
             created_by_user_id=creator.id,
+            type=TxType(side.value),  # BUY / SELL
             stock_symbol=symbol,
             side=side,
             quantity=qty,
@@ -183,6 +185,62 @@ def seed_all(db: Session) -> None:
             after=transaction_snapshot(tx),
         )
         return tx
+
+    def add_cash(
+        member: User,
+        creator: User,
+        tx_type: TxType,
+        amount: str,
+        traded_at: date,
+        *,
+        note: str | None = None,
+    ) -> Transaction:
+        """Cash flow: DEPOSIT (入金) or WITHDRAW (出金) — symbol/qty/price null."""
+        tx = Transaction(
+            club_id=club.id,
+            member_user_id=member.id,
+            created_by_user_id=creator.id,
+            type=tx_type,
+            stock_symbol=None,
+            side=None,
+            quantity=None,
+            price=None,
+            amount=Decimal(amount),
+            traded_at=traded_at,
+            is_opening_balance=False,
+            note=note,
+            status=TxStatus.ACTIVE,
+        )
+        db.add(tx)
+        db.flush()
+        stage_change_log(
+            db,
+            club_id=club.id,
+            actor_user_id=creator.id,
+            entity_type="Transaction",
+            entity_id=tx.id,
+            action=ChangeAction.CREATE,
+            before=None,
+            after=transaction_snapshot(tx),
+        )
+        return tx
+
+    # --- Cash deposits / withdrawals (入金 / 出金) ---
+    # Each member funds their account first so trades + cash balances reconcile
+    # (total_assets − net_deposit == unrealized + realized when priced).
+    #   Alice buys 2,410,000 → fund 2,600,000, leaving 190,000 cash.
+    add_cash(alice, alice, TxType.DEPOSIT, "2600000", date(2026, 1, 5),
+             note="初始入金")
+    #   Carol net stock cash-out 363,000 → fund 500,000, then withdraw 50,000.
+    add_cash(carol, carol, TxType.DEPOSIT, "500000", date(2026, 1, 15),
+             note="初始入金")
+    add_cash(carol, carol, TxType.WITHDRAW, "50000", date(2026, 4, 1),
+             note="部分提領")
+    #   Bob buys 1,025,000 (incl. Alice's 代操 410,000) → fund 1,200,000.
+    add_cash(bob, bob, TxType.DEPOSIT, "1000000", date(2026, 2, 10),
+             note="初始入金")
+    add_cash(bob, bob, TxType.DEPOSIT, "200000", date(2026, 2, 28),
+             note="加碼入金")
 
     # Cost bases sit near the 2026-06-18 mock/real prices for a believable mix
     # of gains and losses (§5). Prices: 2330=2410, 0050=107.3, 2317=268.5,

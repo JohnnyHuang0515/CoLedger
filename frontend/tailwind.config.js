@@ -14,7 +14,7 @@ export default {
         text: {
           primary: '#15202B',
           secondary: '#5C6B7A',
-          muted: '#94A3B2',
+          muted: '#77848F',
         },
         primary: {
           DEFAULT: '#2563EB',

@@ -19,11 +19,9 @@ export function PasswordInput({
       <button
         type="button"
         onClick={() => setShow((s) => !s)}
-        // tabIndex -1 keeps tab order going straight from the field to submit.
-        tabIndex={-1}
         aria-label={show ? '隱藏密碼' : '顯示密碼'}
         aria-pressed={show}
-        className="absolute inset-y-0 right-0 flex items-center px-3 text-base text-text-muted transition-colors hover:text-text-secondary"
+        className="absolute inset-y-0 right-0 flex items-center px-3 text-base text-text-secondary transition-colors hover:text-text-primary"
       >
         {show ? <EyeOffIcon /> : <EyeIcon />}
       </button>

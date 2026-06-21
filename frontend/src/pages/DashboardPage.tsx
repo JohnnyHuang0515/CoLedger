@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClub } from '../club/ClubContext';
-import { useHoldings, useSummary } from '../hooks/queries';
-import { PnLSummaryCard } from '../components/PnLSummaryCard';
+import { useHoldings } from '../hooks/queries';
+import { PnLDonutCard } from '../components/PnLDonutCard';
 import { HoldingTable } from '../components/HoldingTable';
 import { TransactionForm } from '../components/TransactionForm';
 import { Button, Card } from '../components/ui';
@@ -10,24 +10,36 @@ import { EmptyState, ErrorState, SkeletonRows, SkeletonSummary } from '../compon
 import { StaleBadge } from '../components/StaleBadge';
 import { WalletIcon } from '../components/icons';
 import { formatTime } from '../lib/format';
+import type { TxType } from '../api/types';
 
-// P-1 個人持股總覽 — holdings?member=me + summary.
+// P-1 我的資金帳本 — holdings?member=me（含 member.ledger）+ 持股部位.
 export function DashboardPage() {
   const { clubId, canWrite } = useClub();
   const navigate = useNavigate();
-  const [formOpen, setFormOpen] = useState(false);
+  // formMode: null=closed, 'tx'=新增交易, 'cash'=入金/出金
+  const [formMode, setFormMode] = useState<null | TxType>(null);
 
   const holdingsQ = useHoldings(clubId, 'me');
-  const summaryQ = useSummary(clubId);
 
-  const myHoldings = holdingsQ.data?.members[0]?.holdings ?? [];
+  const me = holdingsQ.data?.members[0];
+  const myHoldings = me?.holdings ?? [];
+  const ledger = me?.ledger ?? null;
   const anyStale = myHoldings.some((h) => h.stale || h.price === null);
+
+  const actions = canWrite ? (
+    <>
+      <Button variant="secondary" onClick={() => setFormMode('DEPOSIT')}>
+        ＋ 入金 / 出金
+      </Button>
+      <Button onClick={() => setFormMode('BUY')}>＋ 新增交易</Button>
+    </>
+  ) : undefined;
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold text-text-primary">我的持股總覽</h1>
+          <h1 className="text-lg font-bold text-text-primary">資金帳本</h1>
           {holdingsQ.data && (
             <p className="text-xs text-text-muted">
               資料時間 {formatTime(holdingsQ.data.as_of)}
@@ -35,31 +47,25 @@ export function DashboardPage() {
             </p>
           )}
         </div>
-        {canWrite && (
-          <Button onClick={() => setFormOpen(true)}>＋ 新增交易</Button>
-        )}
+        {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
       </div>
 
-      {/* Summary card */}
-      {summaryQ.isLoading ? (
+      {/* 賺賠甜甜圈卡 — 甜甜圈(獲利/虧損)+報酬率 ＋ 總資產/總損益 ＋ 淨入金/已實現 */}
+      {holdingsQ.isLoading ? (
         <Card>
           <SkeletonSummary />
         </Card>
-      ) : summaryQ.isError ? (
+      ) : holdingsQ.isError ? (
         <Card>
-          <ErrorState error={summaryQ.error} onRetry={() => summaryQ.refetch()} />
+          <ErrorState error={holdingsQ.error} onRetry={() => holdingsQ.refetch()} />
         </Card>
-      ) : summaryQ.data ? (
-        <PnLSummaryCard
-          totalMarketValue={summaryQ.data.total_market_value}
-          totalUnrealized={summaryQ.data.total_unrealized_pnl}
-          totalRealized={summaryQ.data.total_realized_pnl}
-        />
+      ) : ledger ? (
+        <PnLDonutCard ledger={ledger} holdings={myHoldings} title="總資產" />
       ) : null}
 
-      {/* Holdings */}
-      <Card>
-        <div className="border-b border-border px-5 py-3">
+      {/* Holdings — 手機讓持股卡浮在頁面背景，桌機維持白卡＋表格 */}
+      <section className="md:rounded-card md:border md:border-border md:bg-surface md:shadow-card">
+        <div className="pb-1 md:border-b md:border-border md:px-5 md:py-3">
           <h2 className="text-sm font-bold text-text-primary">持股部位</h2>
         </div>
         {holdingsQ.isLoading ? (
@@ -73,14 +79,14 @@ export function DashboardPage() {
             description="先補登你現有的持股部位，或新增第一筆交易。"
             action={
               canWrite ? (
-                <Button onClick={() => setFormOpen(true)}>補登持股 / 新增交易</Button>
+                <Button onClick={() => setFormMode('BUY')}>補登持股 / 新增交易</Button>
               ) : undefined
             }
           />
         ) : (
           <HoldingTable holdings={myHoldings} />
         )}
-      </Card>
+      </section>
 
       <div>
         <button
@@ -92,7 +98,9 @@ export function DashboardPage() {
         </button>
       </div>
 
-      {formOpen && <TransactionForm open onClose={() => setFormOpen(false)} />}
+      {formMode && (
+        <TransactionForm open initialType={formMode} onClose={() => setFormMode(null)} />
+      )}
     </div>
   );
 }

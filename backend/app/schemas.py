@@ -19,6 +19,19 @@ def money_str(value: Decimal | None) -> str | None:
     return f"{q}"
 
 
+def ratio_str(value: Decimal | None) -> str | None:
+    """Render a ratio (e.g. return_pct) as a 4dp string; None passes through.
+
+    0.1234 == +12.34%. The frontend multiplies by 100 for display.
+    """
+    if value is None:
+        return None
+    q = Decimal(value).quantize(Decimal("0.0001"))
+    if q == 0:  # avoid "-0.0000"
+        q = Decimal("0.0000")
+    return f"{q}"
+
+
 # --- Auth ----------------------------------------------------------------
 
 
@@ -145,10 +158,16 @@ class PatchMemberResponse(BaseModel):
 
 class CreateTransactionRequest(BaseModel):
     member_user_id: str | None = None
-    stock_symbol: str
-    side: str  # BUY | SELL
-    quantity: int
-    price: Decimal
+    # type: 'BUY' | 'SELL' | 'DEPOSIT' | 'WITHDRAW'. Defaults to BUY/SELL via
+    # `side` for backward compatibility when omitted.
+    type: str | None = None
+    # Stock fields (BUY/SELL only; omitted/null for cash).
+    stock_symbol: str | None = None
+    side: str | None = None  # BUY | SELL
+    quantity: int | None = None
+    price: Decimal | None = None
+    # Cash field (DEPOSIT/WITHDRAW only). Positive amount.
+    amount: Decimal | None = None
     traded_at: date
     is_opening_balance: bool = False
     note: str | None = None
@@ -157,18 +176,24 @@ class CreateTransactionRequest(BaseModel):
 class PatchTransactionRequest(BaseModel):
     quantity: int | None = None
     price: Decimal | None = None
+    amount: Decimal | None = None  # cash (DEPOSIT/WITHDRAW) edits
     traded_at: date | None = None
     note: str | None = None
 
 
 class TransactionOut(BaseModel):
-    """Shape returned by POST/PATCH transactions (§6.2 + contract §4)."""
+    """Shape returned by POST/PATCH transactions (§6.2 + contract §4).
+
+    `type` is authoritative ('BUY'|'SELL'|'DEPOSIT'|'WITHDRAW'); `side` is kept
+    for BUY/SELL backward-compat (null for cash). Stock fields are null for cash.
+    """
 
     id: str
-    stock_symbol: str
-    side: str
-    quantity: int
-    price: str
+    type: str
+    stock_symbol: str | None
+    side: str | None
+    quantity: int | None
+    price: str | None
     amount: str
     traded_at: str
     status: str
@@ -186,7 +211,8 @@ class HoldingShortOut(BaseModel):
 
 class CreateTransactionResponse(BaseModel):
     transaction: TransactionOut
-    holding: HoldingShortOut
+    # null for cash (DEPOSIT/WITHDRAW) txns, which touch no stock position.
+    holding: HoldingShortOut | None = None
 
 
 class TransactionListItem(BaseModel):
@@ -196,11 +222,12 @@ class TransactionListItem(BaseModel):
     created_by_user_id: str
     created_by_name: str
     is_proxy: bool
-    stock_symbol: str
-    name: str
-    side: str
-    quantity: int
-    price: str
+    type: str  # BUY | SELL | DEPOSIT | WITHDRAW
+    stock_symbol: str | None  # null for cash (DEPOSIT/WITHDRAW)
+    name: str | None  # null for cash
+    side: str | None  # BUY | SELL; null for cash
+    quantity: int | None  # null for cash
+    price: str | None  # null for cash
     amount: str
     traded_at: str
     realized_pnl: str | None  # 本筆已實現 (SELL only, else null)
@@ -215,11 +242,43 @@ class TransactionListResponse(BaseModel):
 # --- Holdings / Summary / Activity --------------------------------------
 
 
+class LedgerOut(BaseModel):
+    """Per-member (or club-wide) fund ledger; all money as decimal strings.
+
+    return_pct is a 4dp ratio string (e.g. "0.1234" == +12.34%) or null when
+    net_deposit <= 0.
+    """
+
+    net_deposit: str
+    cost_basis: str
+    cash_balance: str
+    market_value: str
+    unrealized_pnl: str
+    realized_pnl: str
+    total_assets: str
+    return_pct: str | None
+
+
+def ledger_out(ledger) -> LedgerOut:  # type: ledger_calc.Ledger (duck-typed)
+    """Serialize a ledger_calc.Ledger into the LedgerOut wire shape."""
+    return LedgerOut(
+        net_deposit=money_str(ledger.net_deposit),
+        cost_basis=money_str(ledger.cost_basis),
+        cash_balance=money_str(ledger.cash_balance),
+        market_value=money_str(ledger.market_value),
+        unrealized_pnl=money_str(ledger.unrealized_pnl),
+        realized_pnl=money_str(ledger.realized_pnl),
+        total_assets=money_str(ledger.total_assets),
+        return_pct=ratio_str(ledger.return_pct),
+    )
+
+
 class HoldingFullOut(BaseModel):
     stock_symbol: str
     name: str
     quantity: int
     avg_cost: str
+    cost_basis: str  # 本金 = avg_cost × quantity
     price: str | None
     price_as_of: str | None
     stale: bool
@@ -231,6 +290,7 @@ class HoldingFullOut(BaseModel):
 class MemberHoldingsOut(BaseModel):
     user_id: str
     display_name: str
+    ledger: LedgerOut
     holdings: list[HoldingFullOut]
 
 
@@ -252,6 +312,7 @@ class SummaryResponse(BaseModel):
     total_market_value: str
     total_unrealized_pnl: str
     total_realized_pnl: str
+    club_ledger: LedgerOut  # 全員 ledger 加總 (return_pct 用社團總額算)
     by_symbol: list[SummaryBySymbol]
 
 

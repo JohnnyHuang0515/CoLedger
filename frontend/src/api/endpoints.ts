@@ -7,6 +7,7 @@ import type {
   AuthResponse,
   ClubListResponse,
   CreateClubResponse,
+  CreateCashTransactionRequest,
   CreateTransactionRequest,
   CreateInviteResponse,
   GetClubResponse,
@@ -106,6 +107,17 @@ export function removeMember(clubId: string, userId: string): Promise<void> {
 export function createTransaction(
   clubId: string,
   input: CreateTransactionRequest,
+): Promise<TransactionMutationResponse> {
+  return apiFetch<TransactionMutationResponse>(`/clubs/${clubId}/transactions`, {
+    method: 'POST',
+    body: input,
+  });
+}
+
+// 現金交易 (入金/出金) — 與股票交易共用 /transactions 端點，差別在 body 帶 type + amount。
+export function createCashTransaction(
+  clubId: string,
+  input: CreateCashTransactionRequest,
 ): Promise<TransactionMutationResponse> {
   return apiFetch<TransactionMutationResponse>(`/clubs/${clubId}/transactions`, {
     method: 'POST',

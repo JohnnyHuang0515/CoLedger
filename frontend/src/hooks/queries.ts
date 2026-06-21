@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from '../api/endpoints';
 import type {
   ActivityQuery,
+  CreateCashTransactionRequest,
   CreateTransactionRequest,
   InviteRole,
   Role,
@@ -83,6 +84,14 @@ export function useCreateTransaction(clubId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateTransactionRequest) => api.createTransaction(clubId, input),
+    onSuccess: () => invalidateAfterTxWrite(qc, clubId),
+  });
+}
+
+export function useCreateCashTransaction(clubId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateCashTransactionRequest) => api.createCashTransaction(clubId, input),
     onSuccess: () => invalidateAfterTxWrite(qc, clubId),
   });
 }

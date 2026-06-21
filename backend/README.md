@@ -1,4 +1,4 @@
-# 協作股票紀錄系統 — Backend (POC)
+# 同甘共股 CoLedger — Backend
 
 FastAPI + SQLAlchemy 2.x + SQLite。實作 `BUILD-CONTRACT.md` 的全部後端契約：
 JWT Bearer 認證、移動平均損益（§3）、後端授權（VIEWER/代操）、ChangeLog、

@@ -15,6 +15,7 @@ from ..schemas import ActivityEntry, ActivityPage, ActivityResponse
 router = APIRouter(prefix="/api/clubs", tags=["activity"])
 
 _SIDE_ZH = {"BUY": "買", "SELL": "賣"}
+_CASH_ZH = {"DEPOSIT": "入金", "WITHDRAW": "出金"}
 _ACTION_ZH = {"CREATE": "新增", "UPDATE": "修改", "DELETE": "刪除"}
 _ROLE_ZH = {"OWNER": "團主", "MEMBER": "成員", "VIEWER": "唯讀"}
 
@@ -36,13 +37,19 @@ def _build_summary(action, entity_type, snap, user_name, stock_name) -> str:
     """A readable 中文 one-liner with IDs resolved to names (no raw UUIDs)."""
     act = _ACTION_ZH.get(action, action)
     if entity_type == "Transaction":
+        tx_type = snap.get("type")
+        member = snap.get("member_user_id")
+        creator = snap.get("created_by_user_id")
+        if tx_type in _CASH_ZH:  # DEPOSIT / WITHDRAW — cash only, no symbol.
+            base = f"{act}資金：{_CASH_ZH[tx_type]} {snap.get('amount')}"
+            if member:
+                base += f"（{user_name(member)}）"
+            return base
         sym = snap.get("stock_symbol", "")
         side = _SIDE_ZH.get(snap.get("side"), snap.get("side") or "")
         base = f"{act}交易：{stock_name(sym)}（{sym}）{side} {_fmt_qty(snap.get('quantity'))} 股"
         if snap.get("price") is not None:
-            base += f" @ {snap['price']}"
-        member = snap.get("member_user_id")
-        creator = snap.get("created_by_user_id")
+            base += f"，每股 {snap['price']}"
         if member and creator and member != creator:
             base += f"（代操：{user_name(creator)} 幫 {user_name(member)} 登錄）"
         return base

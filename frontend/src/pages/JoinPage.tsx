@@ -46,7 +46,7 @@ export function JoinPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-app px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-app px-4">
       <Card className="w-full max-w-sm p-8">
         <h1 className="mb-1 text-xl font-bold text-text-primary">社團邀請</h1>
 
@@ -69,9 +69,9 @@ export function JoinPage() {
             {isAuthenticated ? (
               <>
                 <Button onClick={onAccept} disabled={busy} className="w-full">
-                  {busy ? '加入中…' : `以 ${user?.display_name} 的身分加入`}
+                  {busy ? '加入中…' : user?.display_name ? `以 ${user.display_name} 的身分加入` : '加入社團'}
                 </Button>
-                <p className="mt-3 text-center text-xs text-text-muted">
+                <p className="mt-3 text-center text-xs text-text-secondary">
                   不是你？{' '}
                   <Link to="/login" className="text-primary hover:underline">
                     換帳號登入
